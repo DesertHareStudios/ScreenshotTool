@@ -1,0 +1,12 @@
+{
+  "name": "dhs.screenshot",
+  "version": "1.0.0",
+  "displayName": "Screenshot Tool",
+  "description": "Simple screenshoting tool.",
+  "unity": "2019.1",
+  "author": {
+    "name": "Desert Hare Studios",
+    "email": "dharestudios@gmail.com",
+    "url": "https://desertharestudios.github.io/"
+  }
+}
