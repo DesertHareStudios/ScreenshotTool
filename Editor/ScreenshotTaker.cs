@@ -1,20 +1,17 @@
-﻿using UnityEditor;
+﻿using System.IO;
+using UnityEditor;
 using UnityEngine;
 
 [ExecuteInEditMode]
 public class Screenshot : EditorWindow {
 
-    public string lastScreenshot = "";
-    public Camera myCamera;
+    public Camera targetCamera;
 
-    int resWidth = Screen.width * 4;
-    int resHeight = Screen.height * 4;
-    int scale = 1;
-    float lastTime;
+    int resWidth = 1920;
+    int resHeight = 1080;
     string path = "";
-    bool takeHiResShot = false;
-    bool takeShot = false;
-    RenderTexture renderTexture;
+    bool takeShotFromCamera = false;
+    bool takeShotFromGameView = false;
 
     [MenuItem("Window/Desert Hare Studios/Screenshot Tool")]
     public static void ShowWindow() {
@@ -25,6 +22,10 @@ public class Screenshot : EditorWindow {
     }
 
     void OnGUI() {
+        if(string.IsNullOrEmpty(path)) {
+            path = Path.Combine(Application.dataPath, "../Screenshots");
+            path = Path.GetFullPath(path);
+        }
         GUILayout.Label("Save Path", EditorStyles.boldLabel);
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.TextField(path, GUILayout.ExpandWidth(false));
@@ -32,74 +33,76 @@ public class Screenshot : EditorWindow {
             path = EditorUtility.SaveFolderPanel("Path to Save Images", path, Application.dataPath);
         }
         EditorGUILayout.EndHorizontal();
-        if(GUILayout.Button("Take Screenshot From GameView", GUILayout.MinHeight(60))) {
-            if(path == "") {
+        GUILayout.Space(16);
+        if(GUILayout.Button("Take Screenshot From GameView", GUILayout.MinHeight(32))) {
+            if(string.IsNullOrEmpty(path)) {
                 path = EditorUtility.SaveFolderPanel("Path to Save Images", path, Application.dataPath);
                 Debug.Log("Path Set");
-                TakeShot();
+                TakeShotFromGameView();
             } else {
-                TakeShot();
+                TakeShotFromGameView();
             }
+        }
+        GUILayout.Space(16);
+        targetCamera = EditorGUILayout.ObjectField(targetCamera, typeof(Camera), true, null) as Camera;
+        if(targetCamera == null) {
+            targetCamera = Camera.main;
         }
         EditorGUILayout.LabelField("Resolution", EditorStyles.boldLabel);
         resWidth = EditorGUILayout.IntField("Width", resWidth);
         resHeight = EditorGUILayout.IntField("Height", resHeight);
-        scale = EditorGUILayout.IntSlider("Scale", scale, 1, 15);
         GUILayout.Label("Select Camera", EditorStyles.boldLabel);
-        myCamera = EditorGUILayout.ObjectField(myCamera, typeof(Camera), true, null) as Camera;
-        if(myCamera == null) {
-            myCamera = Camera.main;
-        }
-        if(GUILayout.Button("Take Screenshot From Scene", GUILayout.MinHeight(60))) {
-            if(path == "") {
+        if(GUILayout.Button("Take Screenshot From Scene", GUILayout.MinHeight(32))) {
+            if(string.IsNullOrEmpty(path)) {
                 path = EditorUtility.SaveFolderPanel("Path to Save Images", path, Application.dataPath);
-                Debug.Log("Path Set");
-                TakeHiResShot();
+                TakeShotFromCamera();
             } else {
-                TakeHiResShot();
+                TakeShotFromCamera();
             }
         }
-        if(takeHiResShot) {
-            int resWidthN = resWidth * scale;
-            int resHeightN = resHeight * scale;
+        if(string.IsNullOrEmpty(path)) {
+            return;
+        }
+        if(takeShotFromCamera) {
+            int resWidthN = resWidth;
+            int resHeightN = resHeight;
             RenderTexture rt = new RenderTexture(resWidthN, resHeightN, 24);
-            myCamera.targetTexture = rt;
+            targetCamera.targetTexture = rt;
             Texture2D screenShot = new Texture2D(resWidthN, resHeightN, TextureFormat.RGBA32, false);
-            myCamera.Render();
+            targetCamera.Render();
             RenderTexture.active = rt;
             screenShot.ReadPixels(new Rect(0, 0, resWidthN, resHeightN), 0, 0);
-            myCamera.targetTexture = null;
+            targetCamera.targetTexture = null;
             RenderTexture.active = null;
             byte[] bytes = screenShot.EncodeToPNG();
             string filename = ScreenShotName;
-            System.IO.File.WriteAllBytes(filename, bytes);
+            if(!Directory.Exists(path)) {
+                Directory.CreateDirectory(path);
+            }
+            File.WriteAllBytes(filename, bytes);
             Debug.Log(string.Format("Took screenshot to: {0}", filename));
-            takeHiResShot = false;
+            takeShotFromCamera = false;
         }
-        if(takeShot) {
+        if(takeShotFromGameView) {
             ScreenCapture.CaptureScreenshot(ScreenShotName);
-            takeShot = false;
+            takeShotFromGameView = false;
         }
     }
 
     public string ScreenShotName {
         get {
-            string strPath = string.Format("{0}/screen_{1}.png",
+            return string.Format("{0}/screen_{1}.png",
                 path,
                 System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
-            lastScreenshot = strPath;
-            return strPath;
         }
     }
 
-    public void TakeHiResShot() {
-        Debug.Log("Taking Screenshot");
-        takeHiResShot = true;
+    public void TakeShotFromCamera() {
+        takeShotFromCamera = true;
     }
 
-    public void TakeShot() {
-        Debug.Log("Taking Screenshot");
-        takeShot = true;
+    public void TakeShotFromGameView() {
+        takeShotFromGameView = true;
     }
 
 }
